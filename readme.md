@@ -185,32 +185,6 @@ orc = Orchestrator()
 print(orc.run(mode="overview", topic="neural networks"))
 ```
 
----
-
-## 🛠️ Teknik Yetenekler (Bu projede kullanılan)
-
-* Multi-agent mimari tasarımı
-* LLM Entegrasyonu (Gemini API)
-* Tavily Web Search API
-* Prompt engineering
-* Python modüler mimari
-* REST API geliştirme (FastAPI)
-* Pipeline orchestration
-* Markdown raporlama
-* Pydantic Settings & .env yönetimi
-
----
-
-## 📌 Yol Haritası (Roadmap)
-
-* PDF rapor oluşturma
-* Frontend dashboard (Next.js)
-* Multi-agent memory
-* Citation agent
-* Async pipeline geliştirmesi
-
----
-
 ## 🎉 Sonuç
 
 Bu sistem, LLM destekli otomatik araştırma süreçlerini **çok ajanlı bir mimari ile** gerçekleştiren modern ve profesyonel bir AI yapısı sunar.

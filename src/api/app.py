@@ -7,6 +7,8 @@ the multi-agent research system.
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from starlette.middleware.cors import CORSMiddleware
+
 from src.core.orchestrator import Orchestrator
 
 
@@ -15,7 +17,13 @@ app = FastAPI(
     description="Multi-agent system for automated research and analysis",
     version="1.0.0"
 )
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 orc = Orchestrator()
 
 

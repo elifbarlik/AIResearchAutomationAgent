@@ -139,4 +139,10 @@ Desktop.ini
 
 # Reports directory (optional - remove if you want to track generated reports)
 reports/*.md
+reports/*.pdf
 !reports/.gitkeep
+
+# Test files
+test.pdf
+test_*.pdf
+*.test.pdf

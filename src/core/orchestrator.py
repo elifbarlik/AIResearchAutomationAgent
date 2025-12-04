@@ -196,7 +196,7 @@ class Orchestrator:
 
         # STEP 5: RETURN FINAL RESPONSE
         # Return comprehensive result with all metadata
-        return {
+        result = {
             "status": "completed",
             "mode": mode,
             "topic": topic,
@@ -206,3 +206,9 @@ class Orchestrator:
             "steps": steps,
             "report_path": report_path
         }
+
+        # Add PDF path if it was generated
+        if "pdf_path" in report_result.data:
+            result["pdf_path"] = report_result.data["pdf_path"]
+
+        return result

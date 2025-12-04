@@ -4,12 +4,11 @@ Report generation agent for creating professional research reports.
 This agent takes structured JSON analysis data and generates polished,
 human-readable markdown reports with proper formatting and source citations.
 
-COMPLETELY REWRITTEN VERSION:
-- Handles new overview and compare JSON schemas
-- Professional markdown formatting
-- Source citations with clickable links
-- Robust error handling for missing fields
-- Clean, readable report structure
+UPDATED VERSION WITH PDF SUPPORT:
+- Generates markdown reports
+- Automatically generates PDF versions using WeasyPrint
+- Returns both markdown and PDF paths
+- Professional styling and formatting
 """
 
 import os
@@ -18,19 +17,20 @@ from pathlib import Path
 from typing import Optional
 
 from src.agents.base import Agent, AgentResult
+from src.pdf.pdf_generator import PDFGenerator
 
 
 class ReportAgent(Agent):
     """
-    Agent that generates professional markdown research reports.
+    Agent that generates professional markdown and PDF research reports.
 
     Takes structured JSON from AnalysisAgent and generates polished,
-    human-readable markdown reports with proper formatting, source
-    citations, and professional structure.
+    human-readable reports in both markdown and PDF formats.
 
     Key features:
     - Handles overview and compare JSON schemas
     - Professional markdown formatting
+    - Automatic PDF generation with styled templates
     - Source citations with links
     - Graceful handling of missing fields
     - Automatic reports directory creation
@@ -39,6 +39,7 @@ class ReportAgent(Agent):
     Attributes:
         name: The name/identifier of the agent ("report")
         reports_dir: Directory path for saving reports
+        pdf_generator: PDFGenerator instance for PDF creation
 
     Example:
         >>> reporter = ReportAgent()
@@ -50,7 +51,8 @@ class ReportAgent(Agent):
         ...     "sources": [{"title": "Source 1", "url": "https://..."}]
         ... }
         >>> result = reporter.run(mode="overview", analysis_output=analysis)
-        >>> print(result.data['report_path'])
+        >>> print(result.data['report_path'])  # Markdown path
+        >>> print(result.data['pdf_path'])     # PDF path
     """
 
     def __init__(self, reports_dir: str = "reports") -> None:
@@ -67,6 +69,7 @@ class ReportAgent(Agent):
         """
         super().__init__("report")
         self.reports_dir = reports_dir
+        self.pdf_generator = PDFGenerator()
 
         # Ensure reports directory exists
         Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
@@ -81,10 +84,10 @@ class ReportAgent(Agent):
         **kwargs
     ) -> AgentResult:
         """
-        Generate a professional markdown report from analysis output.
+        Generate professional markdown and PDF reports from analysis output.
 
-        Creates a polished markdown report based on the analysis results
-        and saves it to the reports directory with a timestamp.
+        Creates polished reports in both markdown and PDF formats based on
+        the analysis results and saves them to the reports directory.
 
         Args:
             mode: Report mode ("overview" or "compare")
@@ -100,7 +103,8 @@ class ReportAgent(Agent):
         Returns:
             AgentResult: Contains success status and report metadata.
                         On success, data includes:
-                        - "report_path": Full path to the saved report file
+                        - "report_path": Full path to markdown report
+                        - "pdf_path": Full path to PDF report
 
         Example:
             >>> reporter = ReportAgent()
@@ -110,7 +114,8 @@ class ReportAgent(Agent):
             ...     topic="Machine Learning"
             ... )
             >>> if result.success:
-            ...     print(f"Report saved: {result.data['report_path']}")
+            ...     print(f"Markdown: {result.data['report_path']}")
+            ...     print(f"PDF: {result.data['pdf_path']}")
         """
         try:
             # Generate markdown based on mode
@@ -126,17 +131,36 @@ class ReportAgent(Agent):
 
             # Create filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join(self.reports_dir, f"{timestamp}_{mode}.md")
+            base_filename = f"{timestamp}_{mode}"
 
-            # Save report to file with UTF-8 encoding
-            with open(filename, 'w', encoding='utf-8') as f:
+            markdown_path = os.path.join(self.reports_dir, f"{base_filename}.md")
+            pdf_path = os.path.join(self.reports_dir, f"{base_filename}.pdf")
+
+            # Save markdown report
+            with open(markdown_path, 'w', encoding='utf-8') as f:
                 f.write(markdown)
+
+            # Generate PDF report
+            try:
+                self.pdf_generator.generate_pdf(markdown, pdf_path)
+                pdf_generated = True
+            except Exception as pdf_error:
+                # Log PDF error but don't fail the entire operation
+                print(f"Warning: PDF generation failed: {str(pdf_error)}")
+                pdf_generated = False
+                pdf_path = None
+
+            # Prepare result data
+            result_data = {
+                "report_path": markdown_path
+            }
+
+            if pdf_generated and pdf_path:
+                result_data["pdf_path"] = pdf_path
 
             return AgentResult(
                 success=True,
-                data={
-                    "report_path": filename
-                }
+                data=result_data
             )
 
         except Exception as e:

@@ -1,121 +1,132 @@
 """
-Report generation agent for creating research reports.
+Report generation agent for creating professional research reports.
 
-This agent takes analyzed data and generates formatted reports
-in markdown format, saved to the reports directory.
+This agent takes structured JSON analysis data and generates polished,
+human-readable markdown reports with proper formatting and source citations.
+
+COMPLETELY REWRITTEN VERSION:
+- Handles new overview and compare JSON schemas
+- Professional markdown formatting
+- Source citations with clickable links
+- Robust error handling for missing fields
+- Clean, readable report structure
 """
 
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from src.agents.base import Agent, AgentResult
 
 
 class ReportAgent(Agent):
     """
-    Agent that generates formatted research reports.
+    Agent that generates professional markdown research reports.
 
-    The ReportAgent takes structured analysis output from the AnalysisAgent
-    and generates well-formatted markdown reports. Reports are automatically
-    saved to the reports directory with timestamps for easy organization.
+    Takes structured JSON from AnalysisAgent and generates polished,
+    human-readable markdown reports with proper formatting, source
+    citations, and professional structure.
 
-    Currently generates simple markdown reports. Future versions will support:
-    - PDF export with styling
-    - HTML with interactive elements
-    - Rich tables and charts
-    - Custom templates
-    - Multiple output formats (DOCX, LaTeX, etc.)
+    Key features:
+    - Handles overview and compare JSON schemas
+    - Professional markdown formatting
+    - Source citations with links
+    - Graceful handling of missing fields
+    - Automatic reports directory creation
+    - Timestamped filenames
 
     Attributes:
         name: The name/identifier of the agent ("report")
+        reports_dir: Directory path for saving reports
 
     Example:
         >>> reporter = ReportAgent()
-        >>> analysis_data = {"summary": "...", "key_points": [...]}
-        >>> result = reporter.run(mode="overview", analysis_output=analysis_data)
-        >>> print(f"Report saved: {result.data['report_path']}")
+        >>> analysis = {
+        ...     "summary": "Machine learning overview...",
+        ...     "key_points": ["Point 1", "Point 2"],
+        ...     "pros": ["Pro 1"],
+        ...     "cons": ["Con 1"],
+        ...     "sources": [{"title": "Source 1", "url": "https://..."}]
+        ... }
+        >>> result = reporter.run(mode="overview", analysis_output=analysis)
+        >>> print(result.data['report_path'])
     """
 
-    def __init__(self) -> None:
+    def __init__(self, reports_dir: str = "reports") -> None:
         """
         Initialize the ReportAgent.
 
-        Sets the agent name to "report" for identification
-        in the multi-agent system. Also ensures the reports
-        directory exists.
+        Args:
+            reports_dir: Directory path for saving reports (default: "reports")
+
+        Example:
+            >>> reporter = ReportAgent()
+            >>> # or custom directory
+            >>> reporter = ReportAgent(reports_dir="output/reports")
         """
         super().__init__("report")
+        self.reports_dir = reports_dir
 
         # Ensure reports directory exists
-        Path("reports").mkdir(parents=True, exist_ok=True)
+        Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
 
     def run(
         self,
         mode: str,
         analysis_output: dict,
+        topic: Optional[str] = None,
+        item_a: Optional[str] = None,
+        item_b: Optional[str] = None,
         **kwargs
     ) -> AgentResult:
         """
-        Generate a formatted report from analysis output.
+        Generate a professional markdown report from analysis output.
 
-        Creates a markdown report based on the analysis results and saves
-        it to the reports directory with a timestamp. The report format
-        adapts to the mode (overview vs comparative analysis).
+        Creates a polished markdown report based on the analysis results
+        and saves it to the reports directory with a timestamp.
 
         Args:
             mode: Report mode ("overview" or "compare")
-            analysis_output: Structured analysis data from AnalysisAgent.
-                           For overview: {summary, key_points, pros, cons}
-                           For compare: {item_a_summary, item_b_summary,
-                                       comparison_points, pros_cons_table}
+            analysis_output: Structured JSON from AnalysisAgent
+                           For overview: {summary, key_points, pros, cons, sources}
+                           For compare: {overview, comparison, key_differences,
+                                       use_case_recommendations, sources}
+            topic: Topic name for overview reports (optional)
+            item_a: First item name for comparison reports (optional)
+            item_b: Second item name for comparison reports (optional)
             **kwargs: Additional parameters for future use
-                     (e.g., output_format, template, styling_options)
 
         Returns:
             AgentResult: Contains success status and report metadata.
                         On success, data includes:
                         - "report_path": Full path to the saved report file
 
-        Note:
-            Future enhancements planned:
-            - Support for PDF, HTML, DOCX output formats
-            - Rich markdown with tables, charts, embedded images
-            - Custom templates and corporate branding
-            - Export to cloud storage (Google Drive, Dropbox)
-            - Integration with collaboration platforms (Notion, Confluence)
-            - Version control and report history tracking
-
         Example:
             >>> reporter = ReportAgent()
-            >>> analysis = {
-            ...     "summary": "Key findings...",
-            ...     "key_points": ["Point 1", "Point 2"],
-            ...     "pros": ["Pro 1"],
-            ...     "cons": ["Con 1"]
-            ... }
-            >>> result = reporter.run(mode="overview", analysis_output=analysis)
+            >>> result = reporter.run(
+            ...     mode="overview",
+            ...     analysis_output=analysis_data,
+            ...     topic="Machine Learning"
+            ... )
             >>> if result.success:
-            ...     with open(result.data['report_path']) as f:
-            ...         print(f.read())
+            ...     print(f"Report saved: {result.data['report_path']}")
         """
-        if mode == "overview":
-            # Generate overview report
-            markdown = self._generate_overview_report(analysis_output)
-        elif mode == "compare":
-            # Generate comparison report
-            markdown = self._generate_compare_report(analysis_output)
-        else:
-            # Invalid mode
-            return AgentResult(
-                success=False,
-                error="Invalid mode for ReportAgent"
-            )
-
         try:
+            # Generate markdown based on mode
+            if mode == "overview":
+                markdown = self._generate_overview_report(analysis_output, topic)
+            elif mode == "compare":
+                markdown = self._generate_compare_report(analysis_output, item_a, item_b)
+            else:
+                return AgentResult(
+                    success=False,
+                    error=f"Invalid mode '{mode}' for ReportAgent. Use 'overview' or 'compare'."
+                )
+
             # Create filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"reports/{timestamp}_{mode}.md"
+            filename = os.path.join(self.reports_dir, f"{timestamp}_{mode}.md")
 
             # Save report to file with UTF-8 encoding
             with open(filename, 'w', encoding='utf-8') as f:
@@ -127,193 +138,307 @@ class ReportAgent(Agent):
                     "report_path": filename
                 }
             )
+
         except Exception as e:
             return AgentResult(
                 success=False,
-                error=f"Failed to save report: {str(e)}"
+                error=f"Failed to generate report: {str(e)}"
             )
 
-    def _generate_overview_report(self, analysis_output: dict) -> str:
+    def _generate_overview_report(
+        self,
+        analysis_output: dict,
+        topic: Optional[str] = None
+    ) -> str:
         """
-        Generate an overview report in markdown format.
-
-        Creates a structured markdown document with sections for
-        summary, key points, advantages, and limitations.
+        Generate a professional overview report in markdown format.
 
         Args:
-            analysis_output: Analysis data containing:
-                           - summary: Executive summary text
-                           - key_points: List of main insights
-                           - pros: List of advantages
-                           - cons: List of limitations
+            analysis_output: Analysis data with overview JSON schema
+            topic: Topic name (optional, extracted from sources if not provided)
 
         Returns:
-            str: Markdown formatted report content
+            str: Professional markdown formatted report
 
-        Note:
-            Future versions will support:
-            - Rich formatting with colors and emphasis
-            - Embedded charts and visualizations
-            - Citation and source management
-            - Automatic table of contents generation
-            - Custom section ordering and templates
+        Example:
+            >>> reporter = ReportAgent()
+            >>> markdown = reporter._generate_overview_report(analysis_data, "AI")
         """
+        # Extract data with safe defaults
         summary = analysis_output.get("summary", "No summary available.")
         key_points = analysis_output.get("key_points", [])
         pros = analysis_output.get("pros", [])
         cons = analysis_output.get("cons", [])
+        sources = analysis_output.get("sources", [])
+
+        # Infer topic from sources if not provided
+        if not topic:
+            topic = self._infer_topic_from_sources(sources)
 
         # Build markdown report
-        markdown_lines = [
-            "# Overview Report",
-            "",
-            f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "",
-            "---",
-            "",
-            "## Summary",
-            "",
-            summary,
-            "",
-            "---",
-            "",
-            "## Key Points",
-            ""
-        ]
+        lines = []
 
+        # Title
+        lines.append(f"# Overview Report: {topic}")
+        lines.append("")
+        lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Summary Section
+        lines.append("## Summary")
+        lines.append("")
+        lines.append(summary)
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Key Points Section
+        lines.append("## Key Points")
+        lines.append("")
         if key_points:
             for point in key_points:
-                markdown_lines.append(f"- {point}")
+                lines.append(f"- {point}")
         else:
-            markdown_lines.append("*No key points available.*")
+            lines.append("*No key points available.*")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
 
-        markdown_lines.extend([
-            "",
-            "---",
-            "",
-            "## Pros",
-            ""
-        ])
-
+        # Pros Section
+        lines.append("## Pros")
+        lines.append("")
         if pros:
             for pro in pros:
-                markdown_lines.append(f"- {pro}")
+                lines.append(f"- {pro}")
         else:
-            markdown_lines.append("*No pros identified.*")
+            lines.append("*No advantages identified.*")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
 
-        markdown_lines.extend([
-            "",
-            "---",
-            "",
-            "## Cons",
-            ""
-        ])
-
+        # Cons Section
+        lines.append("## Cons")
+        lines.append("")
         if cons:
             for con in cons:
-                markdown_lines.append(f"- {con}")
+                lines.append(f"- {con}")
         else:
-            markdown_lines.append("*No cons identified.*")
+            lines.append("*No limitations identified.*")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
 
-        markdown_lines.extend([
-            "",
-            "---",
-            "",
-            "*Report generated by AI Research Automation Agent*"
-        ])
+        # Sources Section
+        if sources:
+            lines.append("## Sources")
+            lines.append("")
+            for i, source in enumerate(sources, 1):
+                title = source.get("title", "Untitled")
+                url = source.get("url", "")
+                if url:
+                    lines.append(f"{i}. [{title}]({url})")
+                else:
+                    lines.append(f"{i}. {title}")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
 
-        return "\n".join(markdown_lines)
+        # Footer
+        lines.append("*Report generated by AI Research Automation Agent*")
+        lines.append("")
 
-    def _generate_compare_report(self, analysis_output: dict) -> str:
+        return "\n".join(lines)
+
+    def _generate_compare_report(
+        self,
+        analysis_output: dict,
+        item_a: Optional[str] = None,
+        item_b: Optional[str] = None
+    ) -> str:
         """
-        Generate a comparative report in markdown format.
-
-        Creates a structured markdown document comparing two items
-        with individual summaries, comparison points, and a detailed
-        pros/cons analysis.
+        Generate a professional comparison report in markdown format.
 
         Args:
-            analysis_output: Analysis data containing:
-                           - item_a_summary: Summary of first item
-                           - item_b_summary: Summary of second item
-                           - comparison_points: List of comparison aspects
-                           - pros_cons_table: Structured pros/cons data
+            analysis_output: Analysis data with compare JSON schema
+            item_a: First item name (optional, extracted from sources if not provided)
+            item_b: Second item name (optional, extracted from sources if not provided)
 
         Returns:
-            str: Markdown formatted comparison report
+            str: Professional markdown formatted comparison report
 
-        Note:
-            Future versions will support:
-            - Side-by-side comparison tables
-            - Visual comparison charts and graphs
-            - Score cards and rating systems
-            - Interactive elements for web export
-            - Weighted comparison matrices
+        Example:
+            >>> reporter = ReportAgent()
+            >>> markdown = reporter._generate_compare_report(
+            ...     comparison_data, "Python", "JavaScript"
+            ... )
         """
-        item_a_summary = analysis_output.get("item_a_summary", "No summary available.")
-        item_b_summary = analysis_output.get("item_b_summary", "No summary available.")
-        comparison_points = analysis_output.get("comparison_points", [])
-        pros_cons_table = analysis_output.get("pros_cons_table", [])
+        # Extract top-level data
+        overview = analysis_output.get("overview", "No overview available.")
+        comparison = analysis_output.get("comparison", {})
+        key_differences = analysis_output.get("key_differences", [])
+        use_case_recommendations = analysis_output.get("use_case_recommendations", [])
+        sources = analysis_output.get("sources", [])
+
+        # Extract item-specific data
+        item_a_data = comparison.get("item_a", {})
+        item_b_data = comparison.get("item_b", {})
+
+        item_a_summary = item_a_data.get("summary", "No summary available.")
+        item_a_strengths = item_a_data.get("strengths", [])
+        item_a_weaknesses = item_a_data.get("weaknesses", [])
+
+        item_b_summary = item_b_data.get("summary", "No summary available.")
+        item_b_strengths = item_b_data.get("strengths", [])
+        item_b_weaknesses = item_b_data.get("weaknesses", [])
+
+        # Infer item names from sources if not provided
+        if not item_a:
+            item_a = "Item A"
+        if not item_b:
+            item_b = "Item B"
 
         # Build markdown report
-        markdown_lines = [
-            "# Comparison Report",
-            "",
-            f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "",
-            "---",
-            "",
-            "## Item A Summary",
-            "",
-            item_a_summary,
-            "",
-            "---",
-            "",
-            "## Item B Summary",
-            "",
-            item_b_summary,
-            "",
-            "---",
-            "",
-            "## Comparison Points",
-            ""
-        ]
+        lines = []
 
-        if comparison_points:
-            for point in comparison_points:
-                aspect = point.get("aspect", "Unknown")
-                item_a_info = point.get("item_a", "N/A")
-                item_b_info = point.get("item_b", "N/A")
-                markdown_lines.append(f"- **{aspect}:**")
-                markdown_lines.append(f"  - Item A: {item_a_info}")
-                markdown_lines.append(f"  - Item B: {item_b_info}")
+        # Title
+        lines.append(f"# Comparison Report: {item_a} vs {item_b}")
+        lines.append("")
+        lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Overview Section
+        lines.append("## Overview")
+        lines.append("")
+        lines.append(overview)
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Side-by-Side Comparison Section
+        lines.append("## Side-by-Side Comparison")
+        lines.append("")
+
+        # Item A
+        lines.append(f"### {item_a}")
+        lines.append("")
+        lines.append(f"**Summary:** {item_a_summary}")
+        lines.append("")
+
+        lines.append("**Strengths:**")
+        if item_a_strengths:
+            for strength in item_a_strengths:
+                lines.append(f"- {strength}")
         else:
-            markdown_lines.append("*No comparison points available.*")
+            lines.append("- *No strengths identified.*")
+        lines.append("")
 
-        markdown_lines.extend([
-            "",
-            "---",
-            "",
-            "## Pros & Cons Table",
-            ""
-        ])
-
-        if pros_cons_table:
-            for row in pros_cons_table:
-                aspect = row.get("aspect", "Unknown")
-                pros = row.get("pros", "N/A")
-                cons = row.get("cons", "N/A")
-                markdown_lines.append(f"### {aspect}")
-                markdown_lines.append(f"- **Pros:** {pros}")
-                markdown_lines.append(f"- **Cons:** {cons}")
-                markdown_lines.append("")
+        lines.append("**Weaknesses:**")
+        if item_a_weaknesses:
+            for weakness in item_a_weaknesses:
+                lines.append(f"- {weakness}")
         else:
-            markdown_lines.append("*No pros/cons table available.*")
+            lines.append("- *No weaknesses identified.*")
+        lines.append("")
 
-        markdown_lines.extend([
-            "---",
-            "",
-            "*Report generated by AI Research Automation Agent*"
-        ])
+        # Item B
+        lines.append(f"### {item_b}")
+        lines.append("")
+        lines.append(f"**Summary:** {item_b_summary}")
+        lines.append("")
 
-        return "\n".join(markdown_lines)
+        lines.append("**Strengths:**")
+        if item_b_strengths:
+            for strength in item_b_strengths:
+                lines.append(f"- {strength}")
+        else:
+            lines.append("- *No strengths identified.*")
+        lines.append("")
+
+        lines.append("**Weaknesses:**")
+        if item_b_weaknesses:
+            for weakness in item_b_weaknesses:
+                lines.append(f"- {weakness}")
+        else:
+            lines.append("- *No weaknesses identified.*")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Key Differences Section
+        lines.append("## Key Differences")
+        lines.append("")
+        if key_differences:
+            for difference in key_differences:
+                lines.append(f"- {difference}")
+        else:
+            lines.append("*No key differences identified.*")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Use Case Recommendations Section
+        lines.append("## Use Case Recommendations")
+        lines.append("")
+        if use_case_recommendations:
+            for recommendation in use_case_recommendations:
+                lines.append(f"- {recommendation}")
+        else:
+            lines.append("*No recommendations available.*")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # Sources Section
+        if sources:
+            lines.append("## Sources")
+            lines.append("")
+            for i, source in enumerate(sources, 1):
+                title = source.get("title", "Untitled")
+                url = source.get("url", "")
+                if url:
+                    lines.append(f"{i}. [{title}]({url})")
+                else:
+                    lines.append(f"{i}. {title}")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+
+        # Footer
+        lines.append("*Report generated by AI Research Automation Agent*")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _infer_topic_from_sources(self, sources: list) -> str:
+        """
+        Infer topic name from sources.
+
+        Args:
+            sources: List of source dictionaries
+
+        Returns:
+            str: Inferred topic name or default
+        """
+        if not sources or len(sources) == 0:
+            return "Research Topic"
+
+        first_source = sources[0]
+        title = first_source.get("title", "Research Topic")
+
+        # Clean up title to extract topic
+        title = title.replace("Introduction to", "").strip()
+        title = title.replace("What is", "").strip()
+        title = title.replace("?", "").strip()
+
+        if ":" in title:
+            title = title.split(":")[0].strip()
+
+        # Limit length for title
+        if len(title) > 60:
+            title = title[:60] + "..."
+
+        return title if title else "Research Topic"

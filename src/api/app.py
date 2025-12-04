@@ -5,11 +5,8 @@ This module provides REST API endpoints for interacting with
 the multi-agent research system.
 """
 
-from typing import Any
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-
 from src.core.orchestrator import Orchestrator
 
 
@@ -19,12 +16,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
-# Initialize orchestrator (singleton)
-orchestrator = Orchestrator()
+orc = Orchestrator()
 
 
-# Request Models
+# =========================================
+# REQUEST MODELS
+# =========================================
+
 class OverviewRequest(BaseModel):
     """Request model for overview research."""
     topic: str
@@ -44,222 +42,158 @@ class CustomRequest(BaseModel):
     depth: str = "short"
 
 
-# Health Check Endpoint
+# =========================================
+# ENDPOINTS
+# =========================================
+
 @app.get("/health")
-async def health_check() -> dict[str, str]:
+async def health_check():
     """
     Health check endpoint.
 
     Returns a simple status message to verify the API is running.
 
     Returns:
-        dict: Status information with "ok" value
-
-    Example:
-        GET /health
-        Response: {"status": "ok"}
+        dict: {"status": "ok"}
     """
     return {"status": "ok"}
 
 
-# Research Endpoints
 @app.post("/research/overview")
-async def research_overview(request: OverviewRequest) -> dict[str, Any]:
+async def research_overview(req: OverviewRequest):
     """
     Perform overview research on a single topic.
 
-    This endpoint executes the full research pipeline for a single topic:
-    1. Planning - Generate research plan
-    2. Search - Gather information via Tavily API
-    3. Analysis - Analyze results with Gemini LLM
-    4. Report - Generate markdown report
-
     Args:
-        request: OverviewRequest containing:
-               - topic: The research topic
-               - depth: Analysis depth ("short", "medium", "deep")
+        req: OverviewRequest containing topic and depth
 
     Returns:
-        dict: Research results containing:
-            On success:
-            - status: "completed"
-            - mode: "overview"
-            - topic: The researched topic
-            - depth: Analysis depth used
-            - steps: List of plan steps
-            - report_path: Path to generated report
-
-            On failure:
-            - error: Error message
-            - stage: Which stage failed
+        dict: Research results with status, report_path, etc.
 
     Raises:
-        HTTPException: 400 for validation errors, 500 for pipeline failures
-
-    Example:
-        POST /research/overview
-        Body: {
-            "topic": "Quantum Computing",
-            "depth": "medium"
-        }
-
-        Response: {
-            "status": "completed",
-            "mode": "overview",
-            "topic": "Quantum Computing",
-            "depth": "medium",
-            "steps": [...],
-            "report_path": "reports/20231203_123456_overview.md"
-        }
+        HTTPException: 400 if validation fails, 500 if pipeline fails
     """
     try:
-        result = orchestrator.run(
+        # Validate topic
+        if not req.topic or not req.topic.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Topic cannot be empty"
+            )
+
+        # Call orchestrator
+        result = orc.run(
             mode="overview",
-            topic=request.topic,
-            depth=request.depth
+            topic=req.topic,
+            depth=req.depth
         )
+
+        # Check for errors in result
+        if "error" in result:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Research failed at {result.get('stage', 'unknown')} stage: {result['error']}"
+            )
+
         return result
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Research pipeline failed: {str(e)}"
+            detail=f"Overview research failed: {str(e)}"
         )
 
 
 @app.post("/research/compare")
-async def research_compare(request: CompareRequest) -> dict[str, Any]:
+async def research_compare(req: CompareRequest):
     """
     Perform comparative research between two items.
 
-    This endpoint executes the full research pipeline for comparing two items:
-    1. Planning - Generate comparative research plan
-    2. Search - Gather information for both items via Tavily API
-    3. Analysis - Compare and analyze with Gemini LLM
-    4. Report - Generate comparison markdown report
-
     Args:
-        request: CompareRequest containing:
-               - item_a: First item to compare
-               - item_b: Second item to compare
-               - depth: Analysis depth ("short", "medium", "deep")
+        req: CompareRequest containing item_a, item_b, and depth
 
     Returns:
-        dict: Comparison results containing:
-            On success:
-            - status: "completed"
-            - mode: "compare"
-            - item_a: First compared item
-            - item_b: Second compared item
-            - depth: Analysis depth used
-            - steps: List of plan steps
-            - report_path: Path to generated report
-
-            On failure:
-            - error: Error message
-            - stage: Which stage failed
+        dict: Comparison results with status, report_path, etc.
 
     Raises:
-        HTTPException: 400 for validation errors, 500 for pipeline failures
-
-    Example:
-        POST /research/compare
-        Body: {
-            "item_a": "Python",
-            "item_b": "JavaScript",
-            "depth": "short"
-        }
-
-        Response: {
-            "status": "completed",
-            "mode": "compare",
-            "item_a": "Python",
-            "item_b": "JavaScript",
-            "depth": "short",
-            "steps": [...],
-            "report_path": "reports/20231203_123456_compare.md"
-        }
+        HTTPException: 400 if validation fails, 500 if pipeline fails
     """
     try:
-        result = orchestrator.run(
+        # Validate items
+        if not req.item_a or not req.item_a.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="item_a cannot be empty"
+            )
+
+        if not req.item_b or not req.item_b.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="item_b cannot be empty"
+            )
+
+        # Call orchestrator
+        result = orc.run(
             mode="compare",
-            item_a=request.item_a,
-            item_b=request.item_b,
-            depth=request.depth
+            item_a=req.item_a,
+            item_b=req.item_b,
+            depth=req.depth
         )
+
+        # Check for errors in result
+        if "error" in result:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Comparison failed at {result.get('stage', 'unknown')} stage: {result['error']}"
+            )
+
         return result
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Comparison pipeline failed: {str(e)}"
+            detail=f"Comparison research failed: {str(e)}"
         )
 
 
 @app.post("/research/custom")
-async def research_custom(request: CustomRequest) -> dict[str, Any]:
+async def research_custom(req: CustomRequest):
     """
     Perform custom research with automatic mode detection.
 
-    This endpoint intelligently determines whether to perform overview
-    or comparative research based on the query content:
-    - If query contains " vs " → comparative research
-    - Otherwise → overview research
-
-    For comparative queries, automatically extracts the two items to compare.
+    Detects whether to use overview or compare mode based on query content.
+    If query contains " vs ", uses compare mode. Otherwise uses overview mode.
 
     Args:
-        request: CustomRequest containing:
-               - query: Natural language research query
-               - depth: Analysis depth ("short", "medium", "deep")
+        req: CustomRequest containing query and depth
 
     Returns:
-        dict: Research results (same structure as overview/compare endpoints)
+        dict: Research results (same structure as overview/compare)
 
     Raises:
-        HTTPException: 400 for invalid queries, 500 for pipeline failures
-
-    Example:
-        POST /research/custom
-        Body: {
-            "query": "sql vs nosql",
-            "depth": "medium"
-        }
-
-        Response: {
-            "status": "completed",
-            "mode": "compare",
-            "item_a": "sql",
-            "item_b": "nosql",
-            "depth": "medium",
-            "steps": [...],
-            "report_path": "reports/20231203_123456_compare.md"
-        }
-
-        POST /research/custom
-        Body: {
-            "query": "machine learning applications",
-            "depth": "short"
-        }
-
-        Response: {
-            "status": "completed",
-            "mode": "overview",
-            "topic": "machine learning applications",
-            "depth": "short",
-            "steps": [...],
-            "report_path": "reports/20231203_123456_overview.md"
-        }
+        HTTPException: 400 if validation fails, 500 if pipeline fails
     """
     try:
-        query = request.query.strip()
-        depth = request.depth
+        # Validate query
+        if not req.query or not req.query.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Query cannot be empty"
+            )
+
+        query = req.query.strip()
+        depth = req.depth
 
         # Detect mode based on query content
         if " vs " in query.lower():
-            # Comparative research mode
-            mode = "compare"
-
+            # COMPARE MODE
             # Split query by " vs " (case insensitive)
             parts = query.lower().split(" vs ")
+
             if len(parts) != 2:
                 raise HTTPException(
                     status_code=400,
@@ -276,40 +210,38 @@ async def research_custom(request: CustomRequest) -> dict[str, Any]:
                     detail="Both items must be non-empty for comparison"
                 )
 
-            # Run comparison research
-            result = orchestrator.run(
+            # Call orchestrator in compare mode
+            result = orc.run(
                 mode="compare",
                 item_a=item_a,
                 item_b=item_b,
                 depth=depth
             )
-            return result
 
         else:
-            # Overview research mode
-            mode = "overview"
+            # OVERVIEW MODE
             topic = query
 
-            # Validate topic
-            if not topic:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Query cannot be empty"
-                )
-
-            # Run overview research
-            result = orchestrator.run(
+            # Call orchestrator in overview mode
+            result = orc.run(
                 mode="overview",
                 topic=topic,
                 depth=depth
             )
-            return result
+
+        # Check for errors in result
+        if "error" in result:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Custom research failed at {result.get('stage', 'unknown')} stage: {result['error']}"
+            )
+
+        return result
 
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Custom research pipeline failed: {str(e)}"
+            detail=f"Custom research failed: {str(e)}"
         )

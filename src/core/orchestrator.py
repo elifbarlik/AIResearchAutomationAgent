@@ -166,6 +166,9 @@ class Orchestrator:
         analysis_result = self.analysis_agent.run(
             mode=mode,
             search_results=search_results,
+            topic=topic,
+            item_a=item_a,
+            item_b=item_b,
             depth=depth
         )
         if not analysis_result.success:
@@ -179,7 +182,10 @@ class Orchestrator:
         # Generate formatted markdown report
         report_result = self.report_agent.run(
             mode=mode,
-            analysis_output=analysis_output
+            analysis_output=analysis_output,
+            topic=topic,
+            item_a=item_a,
+            item_b=item_b
         )
         if not report_result.success:
             return {

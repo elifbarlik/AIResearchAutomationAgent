@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Automation - Frontend Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        .loading.active {
+            display: block;
+        }
+        .report-container {
+            margin-top: 30px;
+            border-top: 2px solid #ecf0f1;
+            padding-top: 20px;
+        }
+        .error {
+            background-color: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .links {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+        }
+        .links a {
+            display: inline-block;
+            margin-right: 15px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Research Automation Agent</h1>
+        <p>Test the new HTML rendering feature that returns rendered HTML directly in API responses.</p>
+
+        <div class="form-group">
+            <label for="mode">Research Mode:</label>
+            <select id="mode">
+                <option value="overview">Overview (Single Topic)</option>
+                <option value="compare">Compare (Two Items)</option>
+            </select>
+        </div>
+
+        <div id="overview-fields">
+            <div class="form-group">
+                <label for="topic">Topic:</label>
+                <input type="text" id="topic" placeholder="e.g., Machine Learning">
+            </div>
+        </div>
+
+        <div id="compare-fields" style="display: none;">
+            <div class="form-group">
+                <label for="item_a">First Item:</label>
+                <input type="text" id="item_a" placeholder="e.g., Python">
+            </div>
+            <div class="form-group">
+                <label for="item_b">Second Item:</label>
+                <input type="text" id="item_b" placeholder="e.g., JavaScript">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="depth">Analysis Depth:</label>
+            <select id="depth">
+                <option value="short">Short</option>
+                <option value="medium">Medium</option>
+                <option value="deep">Deep</option>
+            </select>
+        </div>
+
+        <button id="submitBtn" onclick="runResearch()">Generate Research Report</button>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Generating research report... This may take a minute.</p>
+        </div>
+
+        <div id="error" style="display: none;" class="error"></div>
+
+        <div id="links" style="display: none;" class="links">
+            <strong>Quick Links:</strong><br>
+            <a id="viewLink" href="#" target="_blank">View Report (JSON)</a>
+            <a id="viewHtmlLink" href="#" target="_blank">View Report (HTML)</a>
+            <a id="pdfLink" href="#" target="_blank">Download PDF</a>
+        </div>
+
+        <div id="reportContainer" class="report-container"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        // Toggle fields based on mode
+        document.getElementById('mode').addEventListener('change', function() {
+            const mode = this.value;
+            document.getElementById('overview-fields').style.display =
+                mode === 'overview' ? 'block' : 'none';
+            document.getElementById('compare-fields').style.display =
+                mode === 'compare' ? 'block' : 'none';
+        });
+
+        async function runResearch() {
+            const mode = document.getElementById('mode').value;
+            const depth = document.getElementById('depth').value;
+
+            // Get input based on mode
+            let requestBody;
+            let endpoint;
+
+            if (mode === 'overview') {
+                const topic = document.getElementById('topic').value.trim();
+                if (!topic) {
+                    showError('Please enter a topic');
+                    return;
+                }
+                endpoint = `${API_BASE}/research/overview`;
+                requestBody = { topic, depth };
+            } else {
+                const item_a = document.getElementById('item_a').value.trim();
+                const item_b = document.getElementById('item_b').value.trim();
+                if (!item_a || !item_b) {
+                    showError('Please enter both items to compare');
+                    return;
+                }
+                endpoint = `${API_BASE}/research/compare`;
+                requestBody = { item_a, item_b, depth };
+            }
+
+            // Show loading state
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('reportContainer').innerHTML = '';
+            document.getElementById('links').style.display = 'none';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.error) {
+                    showError(`Error at ${result.stage} stage: ${result.error}`);
+                    return;
+                }
+
+                // Display the HTML report directly
+                if (result.report_html) {
+                    // Create an iframe to safely display the HTML
+                    const iframe = document.createElement('iframe');
+                    iframe.style.width = '100%';
+                    iframe.style.height = '800px';
+                    iframe.style.border = '1px solid #ddd';
+                    iframe.style.borderRadius = '4px';
+
+                    document.getElementById('reportContainer').appendChild(iframe);
+
+                    // Write the HTML content to the iframe
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(result.report_html);
+                    iframe.contentDocument.close();
+                } else {
+                    showError('No HTML content in response');
+                }
+
+                // Show quick links
+                const linksDiv = document.getElementById('links');
+                linksDiv.style.display = 'block';
+
+                if (result.view_url) {
+                    document.getElementById('viewLink').href = result.view_url;
+                    document.getElementById('viewHtmlLink').href = result.view_url + '?format=html';
+                }
+
+                if (result.pdf_url) {
+                    document.getElementById('pdfLink').href = result.pdf_url;
+                }
+
+                console.log('Full API Response:', result);
+
+            } catch (error) {
+                showError(`Request failed: ${error.message}`);
+                console.error('Error:', error);
+            } finally {
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

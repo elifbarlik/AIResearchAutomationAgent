@@ -105,7 +105,11 @@ class Orchestrator:
                       "item_b": str | None,
                       "depth": str,
                       "steps": list,  # Plan steps from PlannerAgent
-                      "report_path": str  # Path to generated report
+                      "report_path": str,  # Path to markdown report
+                      "report_html": str,  # Rendered HTML content
+                      "pdf_path": str,  # Path to PDF report (if generated)
+                      "view_url": str,  # URL to view report
+                      "pdf_url": str  # URL to download PDF (if generated)
                   }
 
                   On failure:
@@ -207,8 +211,24 @@ class Orchestrator:
             "report_path": report_path
         }
 
-        # Add PDF path if it was generated
+        # Extract filename from report path for URLs
+        import os
+        report_filename = os.path.basename(report_path)
+
+        # Add markdown view URL
+        result["view_url"] = f"http://localhost:8000/reports/view/{report_filename}"
+
+        # Add HTML content if it was generated
+        if "report_html" in report_result.data:
+            result["report_html"] = report_result.data["report_html"]
+
+        # Add PDF path and URL if it was generated
         if "pdf_path" in report_result.data:
-            result["pdf_path"] = report_result.data["pdf_path"]
+            pdf_path = report_result.data["pdf_path"]
+            result["pdf_path"] = pdf_path
+
+            # Extract PDF filename and add download URL
+            pdf_filename = os.path.basename(pdf_path)
+            result["pdf_url"] = f"http://localhost:8000/reports/pdf/{pdf_filename}"
 
         return result

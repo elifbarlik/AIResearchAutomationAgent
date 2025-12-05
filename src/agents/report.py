@@ -15,6 +15,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+import markdown
 
 from src.agents.base import Agent, AgentResult
 from src.pdf.pdf_generator import PDFGenerator
@@ -74,6 +75,107 @@ class ReportAgent(Agent):
         # Ensure reports directory exists
         Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
 
+    def _convert_markdown_to_html(self, markdown_content: str, title: str = "Report") -> str:
+        """
+        Convert markdown content to a styled HTML document.
+
+        Takes raw markdown text and converts it to a complete HTML document
+        with professional styling, including support for code blocks, tables,
+        and other markdown features.
+
+        Args:
+            markdown_content: Raw markdown text to convert
+            title: Title for the HTML document (used in <title> tag)
+
+        Returns:
+            str: Complete HTML document with styling
+        """
+        # Convert markdown to HTML with extensions
+        html_content = markdown.markdown(
+            markdown_content,
+            extensions=['fenced_code', 'tables', 'toc']
+        )
+
+        # Wrap in clean HTML template with professional styling
+        wrapped_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }}
+        h1, h2, h3, h4, h5, h6 {{
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #2c3e50;
+        }}
+        h1 {{
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.3em;
+        }}
+        code {{
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+        }}
+        pre {{
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }}
+        pre code {{
+            background-color: transparent;
+            padding: 0;
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }}
+        th {{
+            background-color: #3498db;
+            color: white;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f9f9f9;
+        }}
+        a {{
+            color: #3498db;
+            text-decoration: none;
+        }}
+        a:hover {{
+            text-decoration: underline;
+        }}
+        blockquote {{
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            color: #666;
+            margin: 1em 0;
+        }}
+    </style>
+</head>
+<body>
+    {html_content}
+</body>
+</html>"""
+
+        return wrapped_html
+
     def run(
         self,
         mode: str,
@@ -120,9 +222,11 @@ class ReportAgent(Agent):
         try:
             # Generate markdown based on mode
             if mode == "overview":
-                markdown = self._generate_overview_report(analysis_output, topic)
+                markdown_text = self._generate_overview_report(analysis_output, topic)
+                title = f"Overview Report: {topic or 'Research'}"
             elif mode == "compare":
-                markdown = self._generate_compare_report(analysis_output, item_a, item_b)
+                markdown_text = self._generate_compare_report(analysis_output, item_a, item_b)
+                title = f"Comparison: {item_a or 'Item A'} vs {item_b or 'Item B'}"
             else:
                 return AgentResult(
                     success=False,
@@ -138,11 +242,21 @@ class ReportAgent(Agent):
 
             # Save markdown report
             with open(markdown_path, 'w', encoding='utf-8') as f:
-                f.write(markdown)
+                f.write(markdown_text)
+
+            # Generate HTML from markdown
+            try:
+                report_html = self._convert_markdown_to_html(markdown_text, title=title)
+                html_generated = True
+            except Exception as html_error:
+                # Log HTML error but don't fail the entire operation
+                print(f"Warning: HTML generation failed: {str(html_error)}")
+                html_generated = False
+                report_html = None
 
             # Generate PDF report
             try:
-                self.pdf_generator.generate_pdf(markdown, pdf_path)
+                self.pdf_generator.generate_pdf(markdown_text, pdf_path)
                 pdf_generated = True
             except Exception as pdf_error:
                 # Log PDF error but don't fail the entire operation
@@ -154,6 +268,9 @@ class ReportAgent(Agent):
             result_data = {
                 "report_path": markdown_path
             }
+
+            if html_generated and report_html:
+                result_data["report_html"] = report_html
 
             if pdf_generated and pdf_path:
                 result_data["pdf_path"] = pdf_path

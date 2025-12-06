@@ -146,5 +146,3 @@ reports/*.pdf
 test.pdf
 test_*.pdf
 *.test.pdf
-
-.claude/

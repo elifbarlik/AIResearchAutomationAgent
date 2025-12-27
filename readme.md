@@ -43,12 +43,44 @@ Each agent is responsible for a specific research phase—planning, web search, 
 
 ## Tech Stack
 
-- **Backend**: Python 3.11, FastAPI, Uvicorn
-- **AI / LLM**: Google Gemini 1.5 (Flash / Pro)
-- **Web Search**: Tavily Search API
-- **Architecture**: Multi-agent orchestration
-- **Infra**: Docker, Railway
-- **Output**: Markdown-based report generation
+**Backend:** 
+- FastAPI (REST API framework)
+- Uvicorn (ASGI server)
+- Python 3.11
+- Pydantic (data validation)
+- Python-dotenv (environment configuration)
+
+**AI / LLM:** 
+- Google Gemini API (google-generativeai)
+- Model: gemini-2.5-flash (default)
+- GeminiClient wrapper for LLM interactions
+
+**Web Search:** 
+- Tavily Search API
+- Real-time web search with structured results
+- Optimized for AI/LLM applications
+
+**Architecture:** 
+- Multi-agent system with Orchestrator pattern
+- Agent-based architecture:
+  - PlannerAgent: Research planning
+  - WebSearchAgent: Web data collection
+  - AnalysisAgent: LLM-powered analysis
+  - ReportAgent: Report generation
+- Modular, extensible Python architecture
+
+**Infra:** 
+- Docker & Docker Compose
+- Python 3.11-slim base image
+- Containerized deployment
+- Environment-based configuration (.env)
+
+**Output:** 
+- Markdown reports (.md)
+- PDF reports (pdfkit/wkhtmltopdf)
+- HTML views (Markdown → HTML conversion)
+- REST API responses (JSON)
+
 
 ## Getting Started
 

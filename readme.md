@@ -1,103 +1,106 @@
-# 🧠 AI Research Automation Agent
+# AI Research Automation Agent
 
-**Çok Ajanlı Yapay Zekâ Araştırma Otomasyon Sistemi**
+AI Research Automation Agent is a multi-agent AI system that autonomously performs technical research, technology comparisons, and analytical reporting.
+It processes real-world web data, applies LLM-based reasoning, and generates professional-quality research reports through an end-to-end automated pipeline.
 
-Bu proje, modern bir **multi-agent (çok ajanlı)** yapıda çalışan, gerçek dünya verilerini işleyerek otomatik teknik araştırma raporları üreten bir **AI Research Automation (Yapay Zekâ Araştırma Otomasyonu)** sistemidir.
+The system is designed for rapid research, objective comparison, and structured report generation, accessible via a production-ready API.
 
-Sistem; planlama, web araması, LLM analizi ve rapor üretiminden oluşan uçtan uca bir pipeline sunar.
+## Live Demo
 
----
+- **API**: https://airesearchautomationagent-production.up.railway.app
+- **Swagger**: https://airesearchautomationagent-production.up.railway.app/docs
 
-## 🚀 Özellikler
+## Problem
 
-* **Multi-agent mimari**
+Researching technical topics and technology comparisons is time-consuming and fragmented.
+Developers and researchers must manually plan research steps, search multiple sources, analyze content, and synthesize results into structured reports. This process is inefficient, error-prone, and difficult to scale.
 
-  * PlannerAgent → araştırma adımlarını planlar
-  * WebSearchAgent → Tavily API ile gerçek web verisi toplar
-  * AnalysisAgent → Gemini LLM ile içgörü üretir
-  * ReportAgent → Markdown formatında profesyonel rapor üretir
-  * Orchestrator → tüm ajanları sırayla çalıştırır
+## Solution
 
-* **Gerçek web araştırması** (Tavily Search API)
+AI Research Automation Agent automates the entire research workflow using a multi-agent architecture.
+Each agent is responsible for a specific research phase—planning, web search, analysis, and reporting—resulting in fast, consistent, and reproducible research outputs.
 
-* **LLM analiz motoru** (Gemini 1.5 Flash / Pro)
+## Key Features
 
-* **Markdown rapor üretimi**
+- Multi-agent research orchestration
+- Autonomous research planning
+- Real-world web data collection (Tavily Search API)
+- LLM-powered analysis (Gemini 1.5 Flash / Pro)
+- Markdown-based professional report generation
+- Modular and extensible Python architecture
+- Production-ready FastAPI backend
+- Public API access with Swagger documentation
 
-* **Modüler ve genişletilebilir Python mimarisi**
+## Architecture Notes
 
-* **FastAPI entegrasyonu ile API servisi**
+- **Planner agent** decomposes research objectives into executable steps
+- **Web search agent** retrieves up-to-date information from the internet
+- **Analysis agent** synthesizes insights using LLM reasoning
+- **Report agent** generates structured Markdown reports
+- **Orchestrator** coordinates agents in a deterministic pipeline
+- **FastAPI** exposes the system as an HTTP API
+- **Docker** ensures environment parity across development and production
 
----
+## Tech Stack
 
-## 📂 Proje Yapısı
+- **Backend**: Python 3.11, FastAPI, Uvicorn
+- **AI / LLM**: Google Gemini 1.5 (Flash / Pro)
+- **Web Search**: Tavily Search API
+- **Architecture**: Multi-agent orchestration
+- **Infra**: Docker, Railway
+- **Output**: Markdown-based report generation
 
-```
-src/
-├── agents/
-│   ├── planner.py
-│   ├── web_search.py
-│   ├── analysis.py
-│   └── report.py
-│
-├── core/
-│   ├── orchestrator.py
-│   ├── llm_client.py
-│   └── config.py
-│
-├── api/
-│   └── app.py
-│
-├── reports/
-│   └── (otomatik oluşturulan markdown raporları)
-│
-└── .env
-```
+## Getting Started
 
----
+### Option 1: Docker (Recommended)
 
-## 🔍 Sistem Akışı
-
-1. **Kullanıcı bir araştırma konusu veya karşılaştırma isteği gönderir.**
-2. **PlannerAgent** araştırma adımlarını belirler.
-3. **WebSearchAgent** Tavily üzerinden gerçek internet araması yapar.
-4. **AnalysisAgent** web sonuçlarını Gemini LLM ile analiz eder.
-5. **ReportAgent** Markdown formatında rapor oluşturur.
-6. **Orchestrator** tüm süreci tek bir fonksiyon ile yönetir.
-
----
-
-## ⚙️ Kurulum
-
-### 1) Repoyu klonlayın
+Build the Docker image:
 
 ```bash
-git clone <repo-url>
-cd ai-research-automation-agent
+docker build -t ai-research-automation-agent .
 ```
 
-### 2) Sanal ortam oluşturun
+Run the container:
+
+```bash
+docker run -p 8000:8000 \
+  -e GEMINI_API_KEY=your_gemini_key \
+  -e TAVILY_API_KEY=your_tavily_key \
+  ai-research-automation-agent
+```
+
+Access Swagger UI:
+
+```
+http://localhost:8000/docs
+```
+
+### Option 2: Local Development
+
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate  # macOS / Linux
 ```
 
-macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-### 3) Gereksinimleri yükleyin
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4) `.env` dosyası oluşturun
+Run the API:
 
+```bash
+uvicorn src.api.app:app --reload
 ```
+
+## Environment Variables
+
+Create a `.env` file:
+
+```env
 GEMINI_API_KEY=your_gemini_key
 TAVILY_API_KEY=your_tavily_key
 SEARCH_API_KEY=your_tavily_key
@@ -105,27 +108,11 @@ DEFAULT_MODE=overview
 DEFAULT_DEPTH=short
 ```
 
----
+In production, these variables are injected via Railway's environment configuration.
 
-## ▶️ Çalıştırma
+## API Endpoints
 
-### API Başlat
-
-```bash
-uvicorn src.api.app:app --reload
-```
-
-### Sağlık testi
-
-```
-GET http://127.0.0.1:8000/health
-```
-
----
-
-## 📡 API Endpointleri
-
-### **POST /research/overview**
+### POST /research/overview
 
 ```json
 {
@@ -134,7 +121,7 @@ GET http://127.0.0.1:8000/health
 }
 ```
 
-### **POST /research/compare**
+### POST /research/compare
 
 ```json
 {
@@ -144,7 +131,7 @@ GET http://127.0.0.1:8000/health
 }
 ```
 
-### **POST /research/custom**
+### POST /research/custom
 
 ```json
 {
@@ -153,39 +140,46 @@ GET http://127.0.0.1:8000/health
 }
 ```
 
----
+## Example Output
 
-## 📝 Örnek Rapor Çıktısı
-
-```
+```markdown
 # Overview Report: Vector Databases
 
 ## Summary
-Gemini tarafından üretilmiş akademik özet...
+LLM-generated technical summary...
 
 ## Key Points
-- Vektör temsilleri
-- Arama performansı
-- Embedding tabanlı sorgular
+- Vector representations
+- Search performance
+- Embedding-based querying
 
 ## Pros
-- Yüksek doğruluk
+- High retrieval accuracy
 
 ## Cons
-- Maliyet bazı senaryolarda artabilir
+- Increased computational cost in some scenarios
 ```
 
----
+## Deployment
 
-## 🧪 Python Üzerinden Test
+This project is Dockerized and deployed to Railway as a production service.
 
-```python
-from src.core.orchestrator import Orchestrator
-orc = Orchestrator()
-print(orc.run(mode="overview", topic="neural networks"))
-```
+- Dockerfile-based build
+- Dynamic port handling (`$PORT`)
+- Public HTTP exposure
+- Production-grade FastAPI runtime
 
-## 🎉 Sonuç
+**Live deployment**: https://airesearchautomationagent-production.up.railway.app
 
-Bu sistem, LLM destekli otomatik araştırma süreçlerini **çok ajanlı bir mimari ile** gerçekleştiren modern ve profesyonel bir AI yapısı sunar.
-Gerçek web verilerini analiz eden, rapor üreten ve API üzerinden erişilebilen uçtan uca bir çözümdür.
+## Roadmap
+
+- [ ] PDF report generation
+- [ ] Multi-source citation tracking
+- [ ] Advanced evaluation metrics for research quality
+- [ ] Frontend dashboard for report visualization
+- [ ] Support for additional LLM providers
+
+## Contributing
+
+Issues and pull requests are welcome.
+For significant changes, please open an issue first to discuss scope and design.

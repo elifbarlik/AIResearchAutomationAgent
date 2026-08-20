@@ -33,12 +33,19 @@ app.add_middleware(
 # CONFIGURATION
 # =========================================
 REPORTS_DIR = Path("reports")
+STATIC_DIR = Path("static")
+
+# Ensure the reports directory exists BEFORE StaticFiles is mounted.
+# StaticFiles raises RuntimeError at import time when its directory is missing,
+# which would stop the app from booting on a clean deployment: reports/ is
+# git-ignored and therefore absent from a fresh checkout.
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # =========================================
 # INITIALIZATION
 # =========================================
 orc = Orchestrator()
-app.mount("/static/reports", StaticFiles(directory="reports"), name="reports")
+app.mount("/static/reports", StaticFiles(directory=REPORTS_DIR), name="reports")
 
 # =========================================
 # HELPER FUNCTIONS
@@ -499,3 +506,22 @@ async def view_report(filename: str, format: str = Query("json", regex="^(html|j
             status_code=500,
             detail=f"Failed to process markdown file: {str(e)}"
         )
+
+
+# =========================================
+# FRONTEND (must stay LAST in this file)
+# =========================================
+# Mounting StaticFiles at "/" acts as a catch-all: any path not matched by the
+# API routes above falls through to it. Because Starlette matches routes in
+# registration order, this mount MUST be declared after every API route --
+# moving it higher up would shadow /health, /research/* and /reports/*.
+#
+# html=True makes the mount serve static/index.html for "/" and fall back to it
+# for unknown paths, so the UI loads at the root URL instead of the previous
+# {"detail":"Not Found"} response.
+if STATIC_DIR.is_dir():
+    app.mount(
+        "/",
+        StaticFiles(directory=STATIC_DIR, html=True),
+        name="frontend"
+    )

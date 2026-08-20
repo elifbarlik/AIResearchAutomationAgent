@@ -215,8 +215,12 @@ class Orchestrator:
         import os
         report_filename = os.path.basename(report_path)
 
-        # Add markdown view URL
-        result["view_url"] = f"http://localhost:8000/reports/view/{report_filename}"
+        # Add markdown view URL.
+        # Kept relative on purpose: a hardcoded http://localhost:8000 host breaks
+        # every client that is not running on the developer's own machine
+        # (Railway, Docker, LAN). A root-relative path resolves against whatever
+        # origin actually served the response.
+        result["view_url"] = f"/reports/view/{report_filename}"
 
         # Add HTML content if it was generated
         if "report_html" in report_result.data:
@@ -229,6 +233,6 @@ class Orchestrator:
 
             # Extract PDF filename and add download URL
             pdf_filename = os.path.basename(pdf_path)
-            result["pdf_url"] = f"http://localhost:8000/reports/pdf/{pdf_filename}"
+            result["pdf_url"] = f"/reports/pdf/{pdf_filename}"
 
         return result
